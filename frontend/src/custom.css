@@ -1,0 +1,170 @@
+/*
+  Custom CSS for LMS Prototype
+  Colors are based on tailwind.config.cjs theme colors
+*/
+:root {
+  --color-background: #f8f9fa;
+  --color-surface: #f8f9fa;
+  --color-surface-container: #edeeef;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-low: #f3f4f5;
+  --color-surface-container-high: #e7e8e9;
+  --color-surface-container-highest: #e1e3e4;
+  --color-primary: #00236f;
+  --color-primary-container: #1e3a8a;
+  --color-primary-fixed: #dce1ff;
+  --color-primary-fixed-dim: #b6c4ff;
+  --color-on-primary: #ffffff;
+  --color-on-primary-fixed: #00164e;
+  --color-on-primary-fixed-variant: #264191;
+  --color-secondary: #006a61;
+  --color-secondary-container: #86f2e4;
+  --color-secondary-fixed: #89f5e7;
+  --color-secondary-fixed-dim: #6bd8cb;
+  --color-on-secondary: #ffffff;
+  --color-on-secondary-fixed: #00201d;
+  --color-on-secondary-fixed-variant: #005049;
+  --color-tertiary: #190093;
+  --color-tertiary-container: #2b15c6;
+  --color-tertiary-fixed: #e2dfff;
+  --color-tertiary-fixed-dim: #c3c0ff;
+  --color-on-tertiary: #ffffff;
+  --color-on-tertiary-fixed: #0f0069;
+  --color-on-tertiary-fixed-variant: #3323cc;
+  --color-error: #ba1a1a;
+  --color-error-container: #ffdad6;
+  --color-on-error: #ffffff;
+  --color-on-error-container: #93000a;
+  --color-outline: #757682;
+  --color-outline-variant: #c5c5d3;
+  --color-inverse-surface: #2e3132;
+  --color-inverse-on-surface: #f0f1f2;
+  --color-inverse-primary: #b6c4ff;
+  --color-surface-tint: #4059aa;
+  --color-on-background: #191c1d;
+  --color-on-surface: #191c1d;
+  --color-on-surface-variant: #444651;
+}
+
+body {
+  background: var(--color-background);
+  color: var(--color-on-surface);
+  font-family: 'Inter', Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+}
+
+/* Example sidebar styling */
+.sidebar {
+  width: 256px;
+  background: var(--color-surface-container-lowest);
+  color: var(--color-on-surface);
+  min-height: 100vh;
+  position: fixed;
+  left: 0;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 32px 16px;
+  z-index: 50;
+  font-family: 'Manrope', Arial, sans-serif;
+}
+
+.sidebar .logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 32px;
+}
+
+.sidebar .logo-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+}
+
+.sidebar .nav {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sidebar .nav-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  color: var(--color-on-surface);
+  text-decoration: none;
+  font-weight: 500;
+  transition: background 0.2s, color 0.2s;
+}
+
+.sidebar .nav-link.active {
+  background: var(--color-primary-fixed);
+  color: var(--color-primary);
+  font-weight: bold;
+}
+
+.sidebar .nav-link:hover {
+  background: var(--color-surface-container);
+}
+
+.sidebar .create-course-btn {
+  width: 100%;
+  padding: 12px 0;
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  border: none;
+  border-radius: 12px;
+  font-weight: bold;
+  margin-top: 16px;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: background 0.2s;
+}
+
+.sidebar .create-course-btn:hover {
+  background: var(--color-primary-container);
+}
+
+.sidebar .footer {
+  margin-top: auto;
+  padding-top: 24px;
+  border-top: 1px solid var(--color-outline-variant);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sidebar .footer-btn {
+  width: 100%;
+  padding: 12px 0;
+  background: var(--color-secondary);
+  color: var(--color-on-secondary);
+  border: none;
+  border-radius: 12px;
+  font-weight: bold;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.sidebar .footer-btn.logout {
+  background: var(--color-error);
+  color: var(--color-on-error);
+}
+
+.sidebar .footer-btn.logout:hover {
+  background: var(--color-error-container);
+  color: var(--color-on-error-container);
+}
+

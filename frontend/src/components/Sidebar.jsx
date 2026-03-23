@@ -1,19 +1,18 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import '../custom.css';
 
 const Sidebar = ({ user, onLogout }) => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const userRole = user?.role ?? "guest";
-
-const links = [
-  { to: "/dashboard", label: "Dashboard", icon: "dashboard", roles: ["learner","admin","guest"] },
-  { to: "/courses", label: "Courses", icon: "menu_book", roles: ["learner","admin","guest"] }, // <- points here
-  { to: "/logs", label: "Logs", icon: "history_edu", roles: ["learner","admin"] },
-  { to: "/catalog", label: "Catalog", icon: "local_library", roles: ["learner","admin"] },
-  { to: "/my-progress", label: "My Progress", icon: "trending_up", roles: ["learner"] },
-  { to: "/settings", label: "Settings", icon: "settings", roles: ["learner","admin"] },
-];
+  const links = [
+    { to: "/dashboard", label: "Dashboard", icon: "dashboard" },
+    { to: "/courses", label: "Courses", icon: "menu_book" },
+    { to: "/logs", label: "Logs", icon: "history_edu" },
+    { to: "/catalog", label: "Catalog", icon: "local_library" },
+    { to: "/my-progress", label: "My Progress", icon: "trending_up" },
+    { to: "/settings", label: "Settings", icon: "settings" },
+  ];
 
   const handleLogout = () => {
     if (onLogout) onLogout();
@@ -21,27 +20,28 @@ const links = [
   };
 
   return (
-    <aside className="w-64 h-screen bg-slate-900 text-white p-6 flex flex-col gap-6 hidden md:flex">
-      {/* Brand */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold tracking-tight">The Atelier</h1>
-        <p className="text-sm text-slate-400">{user?.role || "Master Curator"}</p>
+    <aside className="sidebar">
+      <div className="logo">
+        <div className="logo-icon">
+          {user?.name?.[0] ?? "U"}
+        </div>
+        <div>
+          <h2 style={{ fontWeight: 700, fontSize: '1.5rem', color: 'var(--color-primary)' }}>
+            The Atelier
+          </h2>
+          <p style={{ fontSize: '0.75rem', color: 'var(--color-outline)', textTransform: 'uppercase', fontWeight: 600 }}>
+            Master Curator
+          </p>
+        </div>
       </div>
-
-      {/* Links */}
-      <nav className="flex-1 flex flex-col gap-2">
+      <nav className="nav">
         {links.map((link) => {
-          if (!link.roles.includes(userRole)) return null;
-
-          const isActive = location.pathname === link.to;
-
+          const isActive = link.to === "/" ? location.pathname === "/" : location.pathname.startsWith(link.to);
           return (
             <Link
               key={link.to}
               to={link.to}
-              className={`flex items-center gap-3 px-3 py-2 rounded-lg ${
-                isActive ? "bg-slate-700 font-semibold" : "hover:bg-slate-700"
-              }`}
+              className={`nav-link${isActive ? ' active' : ''}`}
             >
               <span className="material-symbols-outlined">{link.icon}</span>
               <span>{link.label}</span>
@@ -49,22 +49,18 @@ const links = [
           );
         })}
       </nav>
-
-      {/* Footer */}
-      <div className="mt-auto pt-4 border-t border-slate-800 flex flex-col gap-2">
-        <Link
-          to="/account"
-          className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-slate-700"
-        >
-          <span className="material-symbols-outlined">settings</span>
-          <span className="text-sm">Account</span>
-        </Link>
-        <button
-          onClick={handleLogout}
-          className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-red-600 transition-colors font-semibold text-sm"
-        >
+      <button
+        onClick={() => navigate("/courses")}
+        className="create-course-btn"
+      >
+        <span className="material-symbols-outlined" style={{ fontSize: '1rem' }}>add</span>
+        <span>Create New Course</span>
+      </button>
+      <div className="footer">
+        <button className="footer-btn">Upgrade Plan</button>
+        <button onClick={handleLogout} className="footer-btn logout">
           <span className="material-symbols-outlined">logout</span>
-          Logout
+          <span>Logout</span>
         </button>
       </div>
     </aside>
