@@ -13,7 +13,7 @@ Authentication: JWT-based system for secure role-based access
 API Testing: Postman for endpoints verification
 Setup Instructions
 Clone the repository
-git clone https://github.com/yourusername/workerconnect-lms.git
+git clone https://github.com/LMS-prototype
 cd workerconnect-lms
 Install dependencies
 # Backend
