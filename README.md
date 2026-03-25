@@ -1,19 +1,19 @@
 LMS Project
 Project Overview
 
-WorkerConnect LMS is a web app where people can:
+WorkerConnect LMS is a web-based learning system where users can:
 
 Take courses
 Track their progress
-Manage users
+Manage accounts
 
-There are different roles:
+The system supports different roles:
 
-Learners (students)
+Learners
 Admins
 Content creators
 
-The system is built to be easy to expand and well organized.
+It is designed to be simple, scalable, and easy to maintain.
 
 Tech Stack
 
@@ -29,112 +29,108 @@ Express.js
 
 Databases:
 
-PostgreSQL → for users and login
-MongoDB → for courses and progress
+PostgreSQL (SQL) → user data and authentication
+MongoDB (NoSQL) → courses, lessons, and progress
 
 Authentication:
 
-JWT (for secure login and roles)
+JWT (JSON Web Tokens)
 
-API Testing:
+Containerization:
 
-Postman
-Setup Instructions
+Docker + Docker Compose
+Setup Instructions (Docker)
+Requirements
+Docker
+Docker Compose
 1. Clone the project
 git clone https://github.com/LMS-prototype
 cd workerconnect-lms
-2. Install dependencies
-
-Backend:
-
-cd backend
-npm install
-
-Frontend:
-
-cd ../frontend
-npm install
+2. Run the application
+docker-compose up --build
+3. Access the app
+Frontend → http://localhost:3000
+Backend → http://localhost:5000
+4. Stop the app
+docker-compose down
 Environment Variables
 
-Create a .env file in the backend folder:
+Environment variables are already defined in docker-compose.yml.
 
-PORT=5000
-JWT_SECRET=your_jwt_secret
-PG_USER=postgres
-PG_PASS=your_postgres_password
-PG_DB=lms
-PG_HOST=localhost
-PG_PORT=5432
-MONGO_URI=mongodb://localhost:27017/lms
-Run the App
+Main variables used:
 
-Backend:
+JWT_SECRET → for authentication
+PG_USER, PG_PASS, PG_DB → PostgreSQL config
+MONGO_URI → MongoDB connection
+API Documentation
 
-cd backend
-npm run dev
+All API endpoints are tested using Postman.
 
-Frontend:
+Postman Collection:
+(Add your link here)
 
-cd ../frontend
-npm start
-API
-
-All endpoints are tested in Postman.
-
-Examples:
-POST /auth/login → login
-POST /auth/register → create account
+Example Endpoints
+POST /auth/login → login user
+POST /auth/register → register user
 GET /courses → get all courses
 POST /lessons → add lesson (admin only)
-POST /lessons/complete → mark lesson as done
-Database Design
-PostgreSQL (SQL)
+POST /lessons/complete → mark lesson as completed
+Database Design Choices
+PostgreSQL (SQL) – Users
 
 Used for:
 
-Users
-Login
-Roles
+User accounts
+Authentication
+Roles and permissions
 
-Why:
+Why SQL?
 
-Strong structure
-Secure and reliable
-MongoDB (NoSQL)
+Structured data
+Strong relationships
+High data integrity (safe for sensitive data)
+MongoDB (NoSQL) – Content & Progress
 
 Used for:
 
 Courses
 Lessons
-Progress
+Learner progress
 
-Why:
+Why NoSQL?
 
-Flexible
-Good for storing complex data
+Flexible structure
+Easy to store nested data
+Faster changes without complex migrations
 Trade-off
 
-Using two databases is harder to manage, but:
+Using two databases:
 
-Makes the system more flexible
-Helps it scale better
-Microservices Idea
+Improves flexibility and scalability
+ Adds complexity in managing data across systems
+Microservices Architecture (Future Improvement)
 
-The app can be split into smaller services:
+The system can be split into smaller services:
 
-Auth Service → login and users
-Course Service → courses and lessons
-Progress Service → tracking progress
-Notification Service → alerts and messages
-Pros:
-Easier to scale
-Easier to manage parts separately
-Cons:
+Auth Service → handles login, registration, JWT
+Course Service → manages courses and lessons
+Progress Service → tracks user progress
+Notification Service → sends updates
+Advantages
+Easier to scale each service
+Better organization
+Easier maintenance
+Trade-offs
 More complex system
-Services need to communicate
-Key Decisions
-React helps load pages faster
-Node.js + Express make fast APIs
-SQL keeps user data safe
-NoSQL makes course data flexible
-JWT keeps login simple and secure
+Services must communicate with each other
+Reflections & Design Decisions
+React improves performance and user experience
+Node.js + Express provide fast and simple APIs
+SQL for users ensures security and consistency
+NoSQL for content allows flexibility as courses grow
+JWT keeps authentication simple and secure
+Docker makes setup easy and consistent
+Trade-offs
+Using two databases increases complexity
+Microservices improve scaling but add overhead
+Docker adds setup complexity but simplifies deployment
