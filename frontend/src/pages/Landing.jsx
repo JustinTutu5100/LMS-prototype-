@@ -2,292 +2,375 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 const Landing = () => {
-const [role, setRole] = useState("learner");
-const [form, setForm] = useState({
-adminName: "",
-adminCode: "",
-email: "",
-password: "",
-remember: false,
-});
-const [errors, setErrors] = useState({});
-const [submitting, setSubmitting] = useState(false);
-const [message, setMessage] = useState(null);
-const navigate = useNavigate();
+  const [role, setRole] = useState("learner");
+  const [showRegister, setShowRegister] = useState(false);
+  const [form, setForm] = useState({
+    adminName: "",
+    adminCode: "",
+    email: "",
+    password: "",
+    remember: false,
+    fullName: "",
+  });
+  const [errors, setErrors] = useState({});
+  const [submitting, setSubmitting] = useState(false);
+  const [message, setMessage] = useState(null);
 
-function handleChange(e) {
-const { name, type, value, checked } = e.target;
-setForm((prev) => ({
-...prev,
-[name]: type === "checkbox" ? checked : value,
-}));
-}
+  const navigate = useNavigate();
 
-function validate() {
-const err = {};
-if (!form.email || !form.email.includes("@")) err.email = "Enter a valid email.";
-if (!form.password || form.password.length < 4) err.password = "Password must be at least 4 characters.";
-if (role === "admin") {
-if (!form.adminName) err.adminName = "Admin name required.";
-if (!form.adminCode) err.adminCode = "Admin code required.";
-}
-return err;
-}
+  function handleChange(e) {
+    const { name, type, value, checked } = e.target;
+    setForm((prev) => ({
+      ...prev,
+      [name]: type === "checkbox" ? checked : value,
+    }));
+  }
 
-async function handleSubmit(e) {
-e.preventDefault();
-setErrors({});
-setMessage(null);
+  function validate() {
+    const err = {};
+    if (!form.email || !form.email.includes("@")) err.email = "Enter a valid email.";
+    if (!form.password || form.password.length < 4) err.password = "Password must be at least 4 characters.";
 
-clojure
-const err = validate();
-if (Object.keys(err).length) {
-  setErrors(err);
-  return;
-}
+    if (role === "admin" && !showRegister) {
+      if (!form.adminName) err.adminName = "Admin name required.";
+      if (!form.adminCode) err.adminCode = "Admin code required.";
+    }
 
-setSubmitting(true);
+    if (showRegister && !form.fullName) err.fullName = "Full name required for registration.";
 
-try {
-  // Simulate network delay / auth
-  await new Promise((r) => setTimeout(r, 600));
+    return err;
+  }
 
-  if (role === "admin") {
-    // simple fake check — change to real API validation
-    if (form.adminCode !== "ADMIN123") {
-      setErrors({ adminCode: "Invalid admin code." });
-      setSubmitting(false);
+  async function handleSubmit(e) {
+    e.preventDefault();
+    setErrors({});
+    setMessage(null);
+
+    const err = validate();
+    if (Object.keys(err).length) {
+      setErrors(err);
       return;
     }
-    setMessage("Admin login successful. Redirecting to builder...");
-    // navigate to builder (replace with actual builder route)
-    navigate("/admin", { replace: true });
-  } else {
-    setMessage("Learner login successful. Redirecting to dashboard...");
-    navigate("/dashboard", { replace: true });
+
+    setSubmitting(true);
+
+    try {
+      // ----------------------------
+      // DEV-ONLY LOCAL ADMIN BYPASS
+      // ----------------------------
+      // Only enable when not in production AND running on localhost
+      const isLocalhost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+      const devAllow = process.env.NODE_ENV !== "production" && isLocalhost;
+
+      // Define your fake admin pair here (change as you like)
+      const DEV_ADMIN_NAME = "devadmin";
+      const DEV_ADMIN_CODE = "letmein";
+
+      if (role === "admin" && !showRegister && devAllow) {
+        // If the developer entered the exact fake admin name + code, bypass real auth
+        if (form.adminName === DEV_ADMIN_NAME && form.adminCode === DEV_ADMIN_CODE) {
+          // Create a fake token and user object in localStorage (development only)
+          const fakeUser = { id: "dev-1", name: form.adminName, email: form.email || "dev@local", role: "admin" };
+          const fakeToken = "dev-token-12345";
+
+          localStorage.setItem("token", fakeToken);
+          localStorage.setItem("role", "admin");
+          localStorage.setItem("user", JSON.stringify(fakeUser));
+
+          // small delay to simulate network
+          setTimeout(() => {
+            setSubmitting(false);
+            navigate("/admin/dashboard", { replace: true });
+          }, 300);
+
+          return;
+        }
+      }
+
+      // ----------------------------
+      // EXISTING PRODUCTION / SERVER FLOW
+      // ----------------------------
+      let response, data;
+
+      if (showRegister) {
+        response = await fetch("http://localhost:5000/api/auth/register", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: form.fullName,
+            email: form.email,
+            password: form.password,
+          }),
+        });
+        data = await response.json();
+
+        if (!response.ok) {
+          setErrors({ general: data.message || "Registration failed." });
+          setSubmitting(false);
+          return;
+        }
+
+        setMessage("Account created! You can now log in.");
+        setShowRegister(false);
+        setSubmitting(false);
+        return;
+      }
+
+      // Normal login request to server. Include role and admin fields in payload.
+      const loginPayload = {
+        email: form.email,
+        password: form.password,
+        role,
+      };
+
+      if (role === "admin" && !showRegister) {
+        loginPayload.adminName = form.adminName;
+        loginPayload.adminCode = form.adminCode;
+      }
+
+      response = await fetch("http://localhost:5000/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(loginPayload),
+      });
+      data = await response.json();
+
+      if (!response.ok) {
+        setErrors({ general: data.message || "Login failed." });
+        setSubmitting(false);
+        return;
+      }
+
+      const returnedRole = data.user?.role || data.role || "learner";
+
+      // Prevent accidental access if server did not grant admin role
+      if (role === "admin" && returnedRole !== "admin") {
+        setErrors({ general: "Admin credentials are invalid or you do not have admin access." });
+        setSubmitting(false);
+        return;
+      }
+
+      localStorage.setItem("token", data.token);
+      localStorage.setItem("role", returnedRole);
+      localStorage.setItem("user", JSON.stringify(data.user || {}));
+
+      if (returnedRole === "admin") {
+        navigate("/admin/dashboard", { replace: true });
+      } else {
+        navigate("/learner/dashboard", { replace: true });
+      }
+    } catch (error) {
+      console.error(error);
+      setErrors({ general: "Server error. Try again." });
+    } finally {
+      setSubmitting(false);
+    }
   }
-} catch (error) {
-  console.error("Login error", error);
-  setMessage("An unexpected error occurred. Try again.");
-  setSubmitting(false);
-}
 
-}
+  const isDevLocal =
+    process.env.NODE_ENV !== "production" &&
+    (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
 
-return (
-  <div className="relative bg-gradient-to-br from-primary-fixed via-surface to-surface-container-highest text-on-surface font-body antialiased min-h-screen overflow-x-hidden">
-    {/* Top Navigation */}
-    <header className="fixed top-0 w-full z-50 bg-surface-container-highest/90 backdrop-blur-md shadow-lg shadow-outline-variant/30 border-b border-outline-variant/20">
-      <div className="flex justify-between items-center px-8 h-20 w-full max-w-full">
-        <div className="text-2xl font-black text-primary tracking-tighter font-headline drop-shadow-md">
-          Academic Atelier
+  return (
+    <div className="min-h-screen w-screen bg-gradient-to-br from-slate-50 via-slate-100 to-slate-200 flex flex-col font-sans text-gray-900 overflow-x-hidden">
+      {/* Header */}
+      <header className="w-full fixed top-0 z-50 bg-white/80 backdrop-blur-sm border-b border-gray-200">
+        <div className="h-20 flex items-center px-6">
+          <h1 className="text-2xl md:text-3xl font-extrabold text-indigo-600">Academic Atelier</h1>
         </div>
-        <div className="hidden md:flex gap-8">
-          <a className="text-on-surface-variant font-medium hover:text-primary transition-all font-label" href="#">
-            Documentation
-          </a>
-          <a className="text-on-surface-variant font-medium hover:text-primary transition-all font-label" href="#">
-            Support
-          </a>
+      </header>
+
+      {/* Dev banner (local only) */}
+      {isDevLocal && (
+        <div className="fixed right-4 top-24 z-50 bg-yellow-50 border border-yellow-200 text-yellow-800 rounded-md px-3 py-2 text-sm shadow">
+          Dev admin: adminName="devadmin" adminCode="letmein"
         </div>
-      </div>
-    </header>
+      )}
 
-    <main className="min-h-screen pt-20 flex flex-col md:flex-row items-stretch relative">
-      {/* TEST BLOCK: Remove after confirming color output */}
-      
-      {/* Decorative Gradient Overlays */}
-      <div className="pointer-events-none absolute top-0 left-0 w-full h-full z-0">
-        <div className="absolute -top-32 -left-32 w-[600px] h-[600px] bg-primary/20 rounded-full blur-[160px] opacity-80" />
-        <div className="absolute top-1/2 right-0 w-[400px] h-[400px] bg-secondary/20 rounded-full blur-[120px] opacity-70" />
-        <div className="absolute bottom-0 left-1/2 w-[300px] h-[300px] bg-tertiary/20 rounded-full blur-[100px] opacity-60" />
-      </div>
-      {/* Hero Section */}
-      <section className="flex-1 flex flex-col justify-center px-8 md:px-16 py-12 bg-surface/80 text-on-surface relative overflow-hidden z-10 shadow-xl shadow-primary/5">
-        <div className="relative z-10 max-w-2xl">
-          <span className="inline-block px-4 py-1.5 rounded-full bg-secondary-container text-on-secondary-container text-xs font-bold tracking-widest uppercase mb-6 font-label shadow-md">
-            Architected for Excellence
-          </span>
+      {/* Main: strict half/half using full viewport width */}
+      <main className="pt-28 flex-1">
+        <div className="flex flex-col md:flex-row w-screen min-h-[70vh]">
+          {/* Left half */}
+          <div className="w-full md:w-1/2 flex items-center justify-start px-8 md:px-12">
+            <div className="max-w-lg">
+              <h2 className="text-4xl md:text-5xl font-extrabold leading-tight text-gray-900 mb-4">
+                Your Journey into{" "}
+                <span className="text-indigo-600 underline decoration-indigo-200 decoration-4">Modern Learning</span>
+              </h2>
+              <p className="text-lg text-gray-600 mb-8">
+                Experience a microservices-aware architecture designed for the future of education. Lightweight,
+                secure, and built for growth.
+              </p>
 
-          <h1 className="text-5xl md:text-7xl font-extrabold font-headline text-primary tracking-tight leading-[1.1] mb-8 drop-shadow-lg">
-            Your Journey into <span className="text-secondary underline decoration-tertiary/40 underline-offset-8">Modern Learning</span>
-          </h1>
+              <div className="flex flex-wrap gap-3 items-center mb-6">
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setRole("learner")}
+                    className={`px-5 py-2 rounded-md font-semibold transition-transform duration-150 focus:outline-none focus:ring-2 focus:ring-indigo-300 ${
+                      role === "learner"
+                        ? "bg-indigo-600 text-white shadow-md transform scale-105"
+                        : "bg-white text-indigo-600 border border-indigo-100 hover:bg-indigo-50"
+                    }`}
+                    aria-pressed={role === "learner"}
+                  >
+                    Learner
+                  </button>
 
-          <p className="text-lg md:text-xl text-on-surface-variant leading-relaxed mb-10 font-body max-w-xl drop-shadow-sm">
-            Experience a microservices-aware architecture designed for the future of education.
-          </p>
+                  <button
+                    onClick={() => setRole("admin")}
+                    className={`px-5 py-2 rounded-md font-semibold transition-transform duration-150 focus:outline-none focus:ring-2 focus:ring-indigo-300 ${
+                      role === "admin"
+                        ? "bg-indigo-600 text-white shadow-md transform scale-105"
+                        : "bg-white text-indigo-600 border border-indigo-100 hover:bg-indigo-50"
+                    }`}
+                    aria-pressed={role === "admin"}
+                  >
+                    Admin
+                  </button>
+                </div>
 
-          <div className="flex flex-wrap gap-4 mb-12">
-            <button
-              type="button"
-              onClick={() => setRole("learner")}
-              className={`px-8 py-4 rounded-xl font-bold text-lg flex items-center gap-2 transition-all shadow-lg ${
-                role === "learner"
-                  ? "bg-primary text-on-primary scale-105"
-                  : "bg-surface-container-high text-primary hover:bg-surface-container-highest"
-              }`}
-            >
-              Learner Login
-              <span className="material-symbols-outlined">arrow_forward</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setRole("admin")}
-              className={`px-8 py-4 rounded-xl font-bold text-lg flex items-center gap-2 transition-all shadow-lg ${
-                role === "admin"
-                  ? "bg-primary text-on-primary scale-105"
-                  : "bg-surface-container-high text-primary hover:bg-surface-container-highest"
-              }`}
-            >
-              Admin Access
-              <span className="material-symbols-outlined">shield_person</span>
-            </button>
-          </div>
-
-          <div className="grid grid-cols-2 gap-8 pt-8 border-t border-outline-variant/20">
-            <div className="flex flex-col gap-2">
-              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary shadow">
-                <span className="material-symbols-outlined">dynamic_form</span>
+                <button
+                  onClick={() => setShowRegister(!showRegister)}
+                  className="ml-2 px-4 py-2 rounded-md bg-amber-500 text-white font-medium hover:bg-amber-600 focus:outline-none focus:ring-2 focus:ring-amber-300"
+                >
+                  {showRegister ? "Back to Login" : "Create Account"}
+                </button>
               </div>
-              <h3 className="font-bold text-primary font-headline">Micro-Adaptive</h3>
-              <p className="text-sm text-on-surface-variant font-body">Real-time content scaling based on learner velocity.</p>
-            </div>
 
-            <div className="flex flex-col gap-2">
-              <div className="w-10 h-10 rounded-xl bg-secondary/10 flex items-center justify-center text-secondary shadow">
-                <span className="material-symbols-outlined">verified_user</span>
+              <div className="text-sm text-gray-500">
+                <strong className="text-gray-700">Tip:</strong> Use separate admin credentials to access the admin console.
               </div>
-              <h3 className="font-bold text-secondary font-headline">Secure Core</h3>
-              <p className="text-sm text-on-surface-variant font-body">Enterprise-grade isolation for academic integrity.</p>
             </div>
           </div>
-        </div>
-      </section>
 
-      {/* Login Section */}
-      <section className="w-full md:w-[500px] lg:w-[600px] bg-surface-container-low/90 flex flex-col justify-center px-8 md:px-12 py-16 border-l border-outline-variant/20 shadow-2xl shadow-primary/10 z-20">
-        <div className="w-full max-w-md mx-auto">
-          <div className="mb-10">
-            <h2 className="text-3xl font-bold font-headline text-primary mb-2 drop-shadow">Welcome Back</h2>
-            <p className="text-on-surface-variant font-body">Sign in to continue your curated experience.</p>
-          </div>
+          {/* Vertical divider (optional) */}
+          <div className="hidden md:block w-px bg-gray-200" />
 
-          {/* Role Toggle */}
-          <div className="flex bg-surface-container/80 p-1 rounded-xl mb-8 shadow-sm">
-            <button
-              type="button"
-              onClick={() => setRole("learner")}
-              className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all font-label shadow ${
-                role === "learner" ? "bg-primary text-on-primary scale-105" : "text-on-surface-variant bg-white/80 hover:bg-primary/10"
-              }`}
-            >
-              Learner Portal
-            </button>
-            <button
-              type="button"
-              onClick={() => setRole("admin")}
-              className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all font-label shadow ${
-                role === "admin" ? "bg-primary text-on-primary scale-105" : "text-on-surface-variant bg-white/80 hover:bg-primary/10"
-              }`}
-            >
-              Admin View
-            </button>
-          </div>
+          {/* Right half */}
+          <div className="w-full md:w-1/2 flex items-center justify-center px-8 md:px-12">
+            <div className="w-full max-w-md bg-white/95 backdrop-blur-sm border border-gray-200 rounded-2xl shadow-lg p-6 sm:p-8">
+              {message && <div className="mb-4 text-sm text-green-700 bg-green-50 p-3 rounded">{message}</div>}
+              {errors.general && <div className="mb-4 text-sm text-red-700 bg-red-50 p-3 rounded">{errors.general}</div>}
 
-          {message && <div className="mb-4 text-sm text-green-600">{message}</div>}
+              <form onSubmit={handleSubmit} className="space-y-4">
+                {showRegister && (
+                  <div>
+                    <label htmlFor="fullName" className="sr-only">Full name</label>
+                    <input
+                      id="fullName"
+                      name="fullName"
+                      value={form.fullName}
+                      onChange={handleChange}
+                      placeholder="Full name"
+                      className="w-full px-4 py-3 rounded-lg border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                    />
+                    {errors.fullName && <p className="text-red-600 text-sm mt-1">{errors.fullName}</p>}
+                  </div>
+                )}
 
-          <form className="space-y-6" onSubmit={handleSubmit} noValidate>
-            {role === "admin" && (
-              <>
+                {role === "admin" && !showRegister && (
+                  <>
+                    <div>
+                      <label htmlFor="adminName" className="sr-only">Admin name</label>
+                      <input
+                        id="adminName"
+                        name="adminName"
+                        value={form.adminName}
+                        onChange={handleChange}
+                        placeholder="Admin name"
+                        className="w-full px-4 py-3 rounded-lg border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                      />
+                      {errors.adminName && <p className="text-red-600 text-sm mt-1">{errors.adminName}</p>}
+                    </div>
+
+                    <div>
+                      <label htmlFor="adminCode" className="sr-only">Admin code</label>
+                      <input
+                        id="adminCode"
+                        name="adminCode"
+                        value={form.adminCode}
+                        onChange={handleChange}
+                        placeholder="Admin code"
+                        className="w-full px-4 py-3 rounded-lg border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                      />
+                      {errors.adminCode && <p className="text-red-600 text-sm mt-1">{errors.adminCode}</p>}
+                    </div>
+                  </>
+                )}
+
                 <div>
-                  <label htmlFor="adminName" className="block text-sm font-medium text-on-surface-variant mb-2 font-label">
-                  Admin Name
-                </label>
-                <input
-                  id="adminName"
-                  name="adminName"
-                  type="text"
-                  value={form.adminName}
-                  onChange={handleChange}
-                  placeholder="Jane Doe"
-                  className="w-full px-4 py-3 bg-white border border-outline-variant/20 rounded-lg"
-                />
-                {errors.adminName && <p className="text-sm text-red-600 mt-1">{errors.adminName}</p>}
-              </div>
+                  <label htmlFor="email" className="sr-only">Email</label>
+                  <input
+                    id="email"
+                    name="email"
+                    value={form.email}
+                    onChange={handleChange}
+                    placeholder="Email"
+                    className="w-full px-4 py-3 rounded-lg border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                  />
+                  {errors.email && <p className="text-red-600 text-sm mt-1">{errors.email}</p>}
+                </div>
 
-              <div>
-                <label htmlFor="adminCode" className="block text-sm font-medium text-on-surface-variant mb-2 font-label">
-                  Admin Code
-                </label>
-                <input
-                  id="adminCode"
-                  name="adminCode"
-                  type="text"
-                  value={form.adminCode}
-                  onChange={handleChange}
-                  placeholder="ENTER-ADMIN-CODE"
-                  className="w-full px-4 py-3 bg-white border border-outline-variant/20 rounded-lg"
-                />
-                {errors.adminCode && <p className="text-sm text-red-600 mt-1">{errors.adminCode}</p>}
-              </div>
-            </>
-          )}
+                <div>
+                  <label htmlFor="password" className="sr-only">Password</label>
+                  <input
+                    id="password"
+                    name="password"
+                    type="password"
+                    value={form.password}
+                    onChange={handleChange}
+                    placeholder="Password"
+                    className="w-full px-4 py-3 rounded-lg border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                  />
+                  {errors.password && <p className="text-red-600 text-sm mt-1">{errors.password}</p>}
+                </div>
 
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium text-on-surface-variant mb-2 font-label">Institutional Email</label>
-            <input
-              id="email"
-              name="email"
-              type="email"
-              value={form.email}
-              onChange={handleChange}
-              placeholder="name@atelier.edu"
-              className="w-full px-4 py-3 bg-white border border-outline-variant/20 rounded-lg"
-            />
-            {errors.email && <p className="text-sm text-red-600 mt-1">{errors.email}</p>}
+                <div className="flex items-center justify-between">
+                  <label className="inline-flex items-center text-sm text-gray-600">
+                    <input
+                      type="checkbox"
+                      name="remember"
+                      checked={form.remember}
+                      onChange={handleChange}
+                      className="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-200"
+                    />
+                    <span className="ml-2">Remember me</span>
+                  </label>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowRegister(true);
+                      setRole("learner");
+                    }}
+                    className="text-sm text-indigo-600 hover:underline"
+                  >
+                    Need an account?
+                  </button>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className={`w-full py-3 rounded-lg font-semibold transition ${
+                    submitting ? "bg-indigo-300 text-white cursor-wait" : "bg-indigo-600 text-white hover:bg-indigo-700"
+                  }`}
+                >
+                  {submitting
+                    ? "Submitting..."
+                    : showRegister
+                    ? "Create account"
+                    : role === "admin"
+                    ? "Enter Admin Console"
+                    : "Enter The Atelier"}
+                </button>
+              </form>
+            </div>
           </div>
-
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium text-on-surface-variant mb-2 font-label">Security Key</label>
-            <input
-              id="password"
-              name="password"
-              type="password"
-              value={form.password}
-              onChange={handleChange}
-              placeholder="••••••••"
-              className="w-full px-4 py-3 bg-white border border-outline-variant/20 rounded-lg"
-            />
-            {errors.password && <p className="text-sm text-red-600 mt-1">{errors.password}</p>}
-          </div>
-
-          <div className="flex items-center gap-3">
-            <input
-              type="checkbox"
-              id="remember"
-              name="remember"
-              checked={form.remember}
-              onChange={handleChange}
-              className="w-4 h-4"
-            />
-            <label htmlFor="remember" className="text-sm text-on-surface-variant font-body">Keep me signed in for 30 days</label>
-          </div>
-
-          <button type="submit" disabled={submitting} className={`w-full py-4 rounded-lg font-bold text-lg ${submitting ? "bg-slate-400 text-white" : "bg-primary text-on-primary"}`}>
-            {submitting ? "Signing in…" : role === "admin" ? "Enter Admin Console" : "Enter The Atelier"}
-          </button>
-        </form>
-      </div>
-    </section>
-  </main>
-
-  {/* Footer */}
-  <footer className="w-full py-8 bg-white border-t flex justify-between items-center px-10">
-    <div className="text-xs text-slate-500">© 2024 The Academic Atelier</div>
-  </footer>
-</div>
-
-);
+        </div>
+      </main>
+    </div>
+  );
 };
+
 export default Landing;

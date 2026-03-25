@@ -1,14 +1,17 @@
-const mongoose = require('mongoose');
-require('dotenv').config();
+import mongoose from "mongoose";
+import dotenv from "dotenv";
 
-const connectMongo = async () => {
-  try {
-    await mongoose.connect(process.env.MONGO_URI);
-    console.log('MongoDB connected');
-  } catch (err) {
-    console.error('MongoDB connection error:', err);
-    process.exit(1);
-  }
-};
+dotenv.config();
 
-connectMongo();
+const MONGO_URI = process.env.MONGO_URI;
+
+// Connect without legacy options
+mongoose.connect(MONGO_URI);
+
+const db = mongoose.connection;
+
+db.on("connected", () => console.log("✅ MongoDB connected!"));
+db.on("error", (err) => console.error("❌ MongoDB connection error:", err));
+db.on("disconnected", () => console.log("⚠️ MongoDB disconnected!"));
+
+export default mongoose;

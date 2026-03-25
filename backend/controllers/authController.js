@@ -1,35 +1,60 @@
-const jwt = require('jsonwebtoken');
-const bcrypt = require('bcrypt');
-require('dotenv').config();
-const pool = require('../config/postgres');
+import jwt from "jsonwebtoken";
+import bcrypt from 'bcrypt';
+import User from '../models/User.js'; // make sure the path is correct
+// Generate JWT
+const generateToken = (id) => {
+  return jwt.sign({ id }, process.env.JWT_SECRET, {
+    expiresIn: "7d",
+  });
+};
 
-// Register a new user
-exports.register = async (req, res) => {
-  const { username, password, role } = req.body;
+// Register
+export const register = async (req, res) => {
+  const { name, email, password } = req.body;
+
   try {
+    const userExists = await User.findOne({ email });
+    if (userExists) return res.status(400).json({ message: "User already exists" });
+
     const hashedPassword = await bcrypt.hash(password, 10);
-    const result = await pool.query(
-      'INSERT INTO users(username, password, role) VALUES($1, $2, $3) RETURNING id, username, role',
-      [username, hashedPassword, role || 'student']
-    );
-    res.status(201).json(result.rows[0]);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+
+    const user = await User.create({
+      name,
+      email,
+      password: hashedPassword,
+    });
+
+    res.json({
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      token: generateToken(user._id),
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
 };
 
-// Login user
-exports.login = async (req, res) => {
-  const { username, password } = req.body;
+// Login
+export const login = async (req, res) => {
+  const { email, password } = req.body;
+
   try {
-    const result = await pool.query('SELECT * FROM users WHERE username = $1', [username]);
-    const user = result.rows[0];
-    if (!user) return res.status(400).json({ error: 'Invalid credentials' });
-    const match = await bcrypt.compare(password, user.password);
-    if (!match) return res.status(400).json({ error: 'Invalid credentials' });
-    const token = jwt.sign({ id: user.id, username: user.username, role: user.role }, process.env.JWT_SECRET, { expiresIn: '1d' });
-    res.json({ token });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+    const user = await User.findOne({ email });
+
+    if (user && (await bcrypt.compare(password, user.password))) {
+      res.json({
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        token: generateToken(user._id),
+      });
+    } else {
+      res.status(401).json({ message: "Invalid credentials" });
+    }
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
 };
+

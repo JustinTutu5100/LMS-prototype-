@@ -1,8 +1,11 @@
-const express = require('express');
+import express from "express";
+import { getCourses, createCourse, updateCourse, deleteCourse } from "../controllers/courseController.js";
+
 const router = express.Router();
-const authController = require('../controllers/authController');
 
-router.post('/register', authController.register);
-router.post('/login', authController.login);
+router.get("/", getCourses);           // GET /api/courses
+router.post("/", createCourse);        // POST /api/courses
+router.put("/:id", updateCourse);      // PUT /api/courses/:id
+router.delete("/:id", deleteCourse);   // DELETE /api/courses/:id
 
-module.exports = router;
+export default router;

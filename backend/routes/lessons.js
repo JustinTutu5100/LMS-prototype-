@@ -1,10 +1,11 @@
-const express = require('express');
+import express from 'express';
+import { addLesson, getLessons, markCompleted } from '../controllers/lessonController.js';
+import auth from '../middleware/authMiddleware.js';
+
 const router = express.Router();
-const lessonController = require('../controllers/lessonController');
-const auth = require('../middleware/authMiddleware');
 
-router.post('/', auth(['admin']), lessonController.addLesson);
-router.get('/:courseId', auth(), lessonController.getLessons);
-router.post('/complete', auth(), lessonController.markCompleted);
+router.post('/', auth(['admin']), addLesson);
+router.get('/:courseId', auth(), getLessons);
+router.post('/complete', auth(), markCompleted);
 
-module.exports = router;
+export default router;

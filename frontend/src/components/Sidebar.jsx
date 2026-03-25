@@ -5,18 +5,26 @@ const Sidebar = ({ user, onLogout }) => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const links = [
-    { to: "/dashboard", label: "Dashboard", icon: "dashboard" },
-    { to: "/courses", label: "Courses", icon: "menu_book" },
-    { to: "/logs", label: "Logs", icon: "history_edu" },
-    { to: "/catalog", label: "Catalog", icon: "local_library" },
-    { to: "/my-progress", label: "My Progress", icon: "trending_up" },
-    { to: "/settings", label: "Settings", icon: "settings" },
-  ];
+  const isAdmin = user?.role === "admin";
+
+  // ✅ Role-based links
+  const links = isAdmin
+    ? [
+        { to: "/admin/dashboard", label: "Dashboard", icon: "dashboard" },
+        { to: "/admin/courses", label: "Courses", icon: "menu_book" },
+        { to: "/admin/activity", label: "Activity", icon: "settings" },
+      ]
+    : [
+        { to: "/learner/dashboard", label: "Dashboard", icon: "dashboard" },
+        { to: "/learner/my-progress", label: "My Progress", icon: "trending_up" },
+        { to: "/learner/courses", label: "Courses", icon: "local_library" },
+        { to: "/learner/settings", label: "Settings", icon: "settings" },
+      ];
 
   const handleLogout = () => {
     if (onLogout) onLogout();
-    navigate("/login");
+    localStorage.removeItem("role");
+    navigate("/");
   };
 
   return (
@@ -30,13 +38,14 @@ const Sidebar = ({ user, onLogout }) => {
             The Atelier
           </h2>
           <p style={{ fontSize: '0.75rem', color: 'var(--color-outline)', textTransform: 'uppercase', fontWeight: 600 }}>
-            Master Curator
+            {isAdmin ? "Admin Panel" : "Learner Panel"}
           </p>
         </div>
       </div>
+
       <nav className="nav">
         {links.map((link) => {
-          const isActive = link.to === "/" ? location.pathname === "/" : location.pathname.startsWith(link.to);
+          const isActive = location.pathname.startsWith(link.to);
           return (
             <Link
               key={link.to}
@@ -49,15 +58,20 @@ const Sidebar = ({ user, onLogout }) => {
           );
         })}
       </nav>
+
+      {/* ✅ Fixed Create Course button */}
       <button
-        onClick={() => navigate("/courses")}
+        onClick={() =>
+          navigate(isAdmin ? "/admin/courses" : "/learner/courses")
+        }
         className="create-course-btn"
       >
         <span className="material-symbols-outlined" style={{ fontSize: '1rem' }}>add</span>
-        <span>Create New Course</span>
+        <span>{isAdmin ? "Create New Course" : "Browse Courses"}</span>
       </button>
+
       <div className="footer">
-        <button className="footer-btn">Upgrade Plan</button>
+        
         <button onClick={handleLogout} className="footer-btn logout">
           <span className="material-symbols-outlined">logout</span>
           <span>Logout</span>

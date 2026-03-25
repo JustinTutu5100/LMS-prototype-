@@ -1,4 +1,5 @@
-const mongoose = require('mongoose');
+// backend/models/Lesson.js
+import mongoose from 'mongoose';
 
 const lessonSchema = new mongoose.Schema({
   courseId: { type: String, required: true },
@@ -7,4 +8,4 @@ const lessonSchema = new mongoose.Schema({
   content: { type: String, required: true },
 });
 
-module.exports = mongoose.model('Lesson', lessonSchema);
+export default mongoose.model('Lesson', lessonSchema);
